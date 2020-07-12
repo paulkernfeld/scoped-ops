@@ -16,9 +16,6 @@ mod private {
     pub trait VecScopedPrivate {
         type Element;
 
-        // TODO can we get rid of this and just use Deref?
-        fn as_slice(&self) -> &[Self::Element];
-
         fn vec_mut(&mut self) -> &mut Vec<Self::Element>;
     }
 }
@@ -35,10 +32,6 @@ pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
 impl<T> VecScopedPrivate for Vec<T> {
     type Element = T;
 
-    fn as_slice(&self) -> &[Self::Element] {
-        Vec::as_slice(self)
-    }
-
     fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
         self
     }
@@ -51,11 +44,11 @@ impl<T> VecScoped<T> for Vec<T> {}
 #[must_use]
 pub struct Push<'a, V: VecScopedPrivate>(&'a mut V);
 
-impl<'a, V: VecScopedPrivate> std::ops::Deref for Push<'a, V> {
-    type Target = [V::Element];
+impl<'a, T, V: std::ops::Deref<Target=[T]> + VecScopedPrivate> std::ops::Deref for Push<'a, V> {
+    type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        self.0.as_slice()
+        std::ops::Deref::deref(self.0)
     }
 }
 
@@ -68,10 +61,6 @@ impl<'a, V: VecScopedPrivate> Drop for Push<'a, V> {
 
 impl<'a, V: VecScopedPrivate> VecScopedPrivate for Push<'a, V> {
     type Element = V::Element;
-
-    fn as_slice(&self) -> &[Self::Element] {
-        self.0.as_slice()
-    }
 
     fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
         self.0.vec_mut()

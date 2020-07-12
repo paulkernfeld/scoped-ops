@@ -12,22 +12,17 @@
 //!
 //! assert_eq!(&[1], a.vec_mut().as_slice());
 //! ```
-
-/// This is used to prevent end users from mutating the data structure when it's wrapped in a scoped
-/// op. I also tried using a private trait, but it would need to be exposed in a public interface.
-struct PrivacyMarker;
-
-/// This trait is a bit like `Iterator` but for scoped operations. Every scoped operation struct
-/// (e.g. `Push`) as well the data structure (e.g. `Vec`) must implement this trait.
 pub trait VecScoped: Sized {
     type Element;
 
-    fn vec_mut(&mut self, _privacy_marker: PrivacyMarker) -> &mut Vec<Self::Element>;
+    // TODO this should only be accessible from within the trait, we don't want to give users access
+    // to modify the vec because they might break an invariant
+    fn vec_mut(&mut self) -> &mut Vec<Self::Element>;
 
     // TODO add a way to turn this into a &Vec. Could Deref do the trick?
 
     fn pushed(&mut self, value: Self::Element) -> Push<Self> {
-        self.vec_mut(PrivacyMarker).push(value);
+        self.vec_mut().push(value);
         Push(self)
     }
 }
@@ -35,7 +30,7 @@ pub trait VecScoped: Sized {
 impl<T> VecScoped for Vec<T> {
     type Element = T;
 
-    fn vec_mut(&mut self, _privacy_marker: PrivacyMarker) -> &mut Vec<Self::Element> {
+    fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
         self
     }
 }
@@ -47,7 +42,7 @@ pub struct Push<'a, V: VecScoped>(&'a mut V);
 
 impl<'a, V: VecScoped> Drop for Push<'a, V> {
     fn drop(&mut self) {
-        let _did_pop = self.0.vec_mut(PrivacyMarker).pop().is_some();
+        let _did_pop = self.0.vec_mut().pop().is_some();
         debug_assert!(_did_pop, "Someone has illicitly popped an element!");
     }
 }
@@ -55,8 +50,8 @@ impl<'a, V: VecScoped> Drop for Push<'a, V> {
 impl<'a, V: VecScoped> VecScoped for Push<'a, V> {
     type Element = V::Element;
 
-    fn vec_mut(&mut self, _privacy_marker: PrivacyMarker) -> &mut Vec<Self::Element> {
-        self.0.vec_mut(_)
+    fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+        self.0.vec_mut()
     }
 }
 

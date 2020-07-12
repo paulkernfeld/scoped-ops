@@ -35,14 +35,13 @@ impl<T> VecScoped for Vec<T> {
     }
 }
 
-// TODO this should probably be must_use
 // TODO would users ever want to access the element that was popped?
 /// This represents that a single element has been pushed onto a Vec.
+#[must_use]
 pub struct Push<'a, V: VecScoped>(&'a mut V);
 
 impl<'a, V: VecScoped> Drop for Push<'a, V> {
     fn drop(&mut self) {
-        // TODO this doesn't work in release mode
         let _did_pop = self.0.vec_mut().pop().is_some();
         debug_assert!(_did_pop, "Someone has illicitly popped an element!");
     }
@@ -67,5 +66,13 @@ fn test_scoped_vec() {
         assert_eq!(&[1, 2, -3], b.pushed(-3).vec_mut().as_slice());
     }
     assert_eq!(&[1, -2], a.pushed(-2).vec_mut().as_slice());
+    assert_eq!(&[1], a.vec_mut().as_slice());
+}
+
+// TODO automatically verify that this warns
+#[test]
+fn test_must_use() {
+    let mut a = vec![1];
+    a.pushed(2); // This pushes a value that is then immediately popped, which is useless
     assert_eq!(&[1], a.vec_mut().as_slice());
 }

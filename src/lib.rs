@@ -22,7 +22,9 @@ mod private {
 
 use private::VecScopedPrivate;
 
+/// This trait represent a `Vec` or a temporary modification of a `Vec`
 pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
+    /// Temporarily push an element onto the end of the `Vec`
     fn pushed(&mut self, value: T) -> Push<Self> {
         self.vec_mut().push(value);
         Push(self)
@@ -40,7 +42,7 @@ impl<T> VecScopedPrivate for Vec<T> {
 impl<T> VecScoped<T> for Vec<T> {}
 
 // TODO would users ever want to access the element that was popped?
-/// This represents that a single element has been pushed onto a Vec.
+/// This represents the temporary addition of a single element pushed onto a Vec.
 #[must_use]
 pub struct Push<'a, V: VecScopedPrivate>(&'a mut V);
 

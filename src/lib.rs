@@ -1,3 +1,17 @@
+//! Here's a simple example of pushing an element onto a Vec, and having the change automatically
+//! undone:
+//!
+//! ```
+//! use scoped_ops::VecScoped;
+//!
+//! let mut a = vec![1];
+//! {
+//!     let mut b = a.pushed(2);
+//!     assert_eq!(&[1, 2], b.vec_mut().as_slice());
+//! }  // b drops, and undoes its change
+//!
+//! assert_eq!(&[1], a.vec_mut().as_slice());
+//! ```
 pub trait VecScoped: Sized {
     type Element;
 

@@ -10,11 +10,12 @@ structure.
 Advantages:
 
 - Uses normal Rust data structures, so can be integrated into existing code
-- Probably good performance, although benchmarking and assembly inspection would be needed to verify
+- Hopefully zero-cost abstraction, although inspection would be needed to verify
 - No dependencies, could work without `std`
 
 Disadvantages:
 
 - These reversions could in many cases just be coded by hand
+- Possibly slow compilation
 - The generics are kind of a beast; you'll end up with complex nested types like when using futures or iterators
 - The syntax is a bit long and indent-y for my tastes

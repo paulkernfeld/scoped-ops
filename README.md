@@ -19,3 +19,6 @@ Disadvantages:
 - Possibly slow compilation
 - The generics are kind of a beast; you'll end up with complex nested types like when using futures or iterators
 - The syntax is a bit long and indent-y for my tastes
+
+Todo:
+- Add a popping type

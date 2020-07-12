@@ -35,16 +35,16 @@ impl<T> VecScoped for Vec<T> {
     }
 }
 
-/// TODO this should probably be must_use
+// TODO this should probably be must_use
+// TODO would users ever want to access the element that was popped?
+/// This represents that a single element has been pushed onto a Vec.
 pub struct Push<'a, V: VecScoped>(&'a mut V);
 
 impl<'a, V: VecScoped> Drop for Push<'a, V> {
     fn drop(&mut self) {
         // TODO this doesn't work in release mode
-        debug_assert!(
-            self.0.vec_mut().pop().is_some(),
-            "Someone has illicitly popped an element!"
-        );
+        let _did_pop = self.0.vec_mut().pop().is_some();
+        debug_assert!(_did_pop, "Someone has illicitly popped an element!");
     }
 }
 

@@ -26,8 +26,7 @@ use private::VecScopedPrivate;
 pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
     /// Temporarily push an element onto the end of the `Vec`
     fn pushed(&mut self, value: T) -> Push<Self> {
-        self.vec_mut().push(value);
-        Push(self)
+        Push::new(self, value)
     }
 }
 
@@ -46,7 +45,14 @@ impl<T> VecScoped<T> for Vec<T> {}
 #[must_use]
 pub struct Push<'a, V: VecScopedPrivate>(&'a mut V);
 
-impl<'a, T, V: std::ops::Deref<Target=[T]> + VecScopedPrivate> std::ops::Deref for Push<'a, V> {
+impl<'a, V: VecScopedPrivate> Push<'a, V> {
+    pub fn new(vec_scoped: &'a mut V, value: V::Element) -> Self {
+        vec_scoped.vec_mut().push(value);
+        Self(vec_scoped)
+    }
+}
+
+impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Push<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {

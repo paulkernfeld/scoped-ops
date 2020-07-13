@@ -32,6 +32,10 @@ pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
     fn popped(&mut self) -> Pop<Self> {
         Pop::new(self)
     }
+
+    fn update(&mut self, idx: usize, value: T) -> Update<Self> {
+        Update::new(self, value, idx)
+    }
 }
 
 impl<T> VecScopedPrivate for Vec<T> {
@@ -118,6 +122,44 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Push<'a, V> {
 
 impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 
+pub struct Update<'a, V: VecScopedPrivate>(&'a mut V, usize, Option<V::Element>);
+
+impl<'a, V: VecScopedPrivate> Update<'a, V> {
+    pub fn new(vec_scoped: &'a mut V, value: V::Element, idx: usize) -> Self {
+        let inner = vec_scoped.vec_mut();
+        let old = inner.remove(idx);
+        inner.insert(idx, value);
+        Self(vec_scoped, idx, Some(old))
+    }
+}
+
+impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Update<'a, V> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        std::ops::Deref::deref(self.0)
+    }
+}
+
+impl<'a, V: VecScopedPrivate> Drop for Update<'a, V> {
+    fn drop(&mut self) {
+        let idx = self.1;
+        if let Some(old) = self.2.take() {
+            self.vec_mut()[idx] = old;
+        }
+    }
+}
+
+impl<'a, V: VecScopedPrivate> VecScopedPrivate for Update<'a, V> {
+    type Element = V::Element;
+
+    fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+        self.0.vec_mut()
+    }
+}
+
+impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Update<'a, V> {}
+
 #[test]
 fn test_scoped_vec() {
     let mut a = vec![1];
@@ -157,6 +199,21 @@ fn test_pop_push() {
         assert_eq!([-1], *a.popped().pushed(-1));
     }
     assert_eq!([1], *a);
+}
+
+#[test]
+fn test_update() {
+    let mut a = vec![1];
+    {
+        assert_eq!([-1], *a.update(0, -1));
+    }
+    assert_eq!([1], *a);
+
+    let mut a = vec![0, 1, 2, 3];
+    {
+        assert_eq!([0, 1, 5, 3, 6], *a.update(2, 5))
+    }
+    assert_eq!([0, 1, 2, 3], *a);
 }
 
 // TODO automatically verify that this warns

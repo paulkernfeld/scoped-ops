@@ -76,7 +76,7 @@ impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Pop<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        Deref::deref(self.0)
+        &*self.0
     }
 }
 
@@ -114,7 +114,7 @@ impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Push<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        Deref::deref(self.0)
+        &*self.0
     }
 }
 

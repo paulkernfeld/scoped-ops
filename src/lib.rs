@@ -13,6 +13,14 @@
 //! assert_eq!([1], *a);
 //! ```
 mod private {
+    // TODO is this a bad idea, because it would prevent users from implementing their own ops?
+    /// Everything that is `VecScoped` will need to have mutable access to the underlying `Vec`.
+    /// However, only the trait implementations should be allowed to mutate the `Vec`; end users
+    /// should not, because they could violate an invariant.
+    ///
+    /// It's illegal to have a private trait in a public interface. However, in order to emulate
+    /// sealed traits you can use this pattern of a public trait in a private inner module. I got
+    /// this trick from here: https://github.com/rust-lang/rust/issues/34537
     pub trait VecScopedPrivate {
         type Element;
 
@@ -21,7 +29,9 @@ mod private {
 }
 
 use private::VecScopedPrivate;
+use std::ops::Deref;
 
+// TODO this doesn't need to be Sized I think
 /// This trait represent a `Vec` or a temporary modification of a `Vec`
 pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
     /// Temporarily push an element onto the end of the `Vec`
@@ -29,6 +39,7 @@ pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
         Push::new(self, value)
     }
 
+    /// Temporarily pop the last element from the end of the `Vec`
     fn popped(&mut self) -> Pop<Self> {
         Pop::new(self)
     }
@@ -45,6 +56,7 @@ impl<T> VecScopedPrivate for Vec<T> {
 impl<T> VecScoped<T> for Vec<T> {}
 
 // TODO would users ever want to access the element that was popped? or if an element was popped?
+/// See `crate::VecScoped::pop`
 #[must_use]
 pub struct Pop<'a, V: VecScopedPrivate>(&'a mut V, Option<V::Element>);
 
@@ -55,11 +67,11 @@ impl<'a, V: VecScopedPrivate> Pop<'a, V> {
     }
 }
 
-impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Pop<'a, V> {
+impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Pop<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        std::ops::Deref::deref(self.0)
+        Deref::deref(self.0)
     }
 }
 
@@ -82,7 +94,7 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Pop<'a, V> {
 impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Pop<'a, V> {}
 
 // TODO would users ever want to access the element that was popped?
-/// This represents the temporary addition of a single element pushed onto a Vec.
+/// See `crate::VecScoped::push`
 #[must_use]
 pub struct Push<'a, V: VecScopedPrivate>(&'a mut V);
 
@@ -93,11 +105,11 @@ impl<'a, V: VecScopedPrivate> Push<'a, V> {
     }
 }
 
-impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Push<'a, V> {
+impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Push<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        std::ops::Deref::deref(self.0)
+        Deref::deref(self.0)
     }
 }
 

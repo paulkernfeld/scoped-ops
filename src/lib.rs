@@ -31,16 +31,21 @@ mod private {
 use private::VecScopedPrivate;
 use std::ops::Deref;
 
-// TODO this doesn't need to be Sized I think
 /// This trait represent a `Vec` or a temporary modification of a `Vec`
-pub trait VecScoped<T>: Sized + VecScopedPrivate<Element = T> {
+pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
     /// Temporarily push an element onto the end of the `Vec`
-    fn pushed(&mut self, value: T) -> Push<Self> {
+    fn pushed(&mut self, value: T) -> Push<Self>
+    where
+        Self: Sized,
+    {
         Push::new(self, value)
     }
 
     /// Temporarily pop the last element from the end of the `Vec`
-    fn popped(&mut self) -> Pop<Self> {
+    fn popped(&mut self) -> Pop<Self>
+    where
+        Self: Sized,
+    {
         Pop::new(self)
     }
 }

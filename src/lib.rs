@@ -63,12 +63,15 @@ impl<T> VecScoped<T> for Vec<T> {}
 // TODO would users ever want to access the element that was popped? or if an element was popped?
 /// See `crate::VecScoped::pop`
 #[must_use]
-pub struct Pop<'a, V: VecScopedPrivate>(&'a mut V, Option<V::Element>);
+pub struct Pop<'a, V: VecScopedPrivate> {
+    inner: &'a mut V,
+    popped: Option<V::Element>,
+}
 
 impl<'a, V: VecScopedPrivate> Pop<'a, V> {
-    pub fn new(vec_scoped: &'a mut V) -> Self {
-        let value = vec_scoped.vec_mut().pop();
-        Self(vec_scoped, value)
+    pub fn new(inner: &'a mut V) -> Self {
+        let popped = inner.vec_mut().pop();
+        Self { inner, popped }
     }
 }
 
@@ -76,14 +79,14 @@ impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Pop<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &*self.inner
     }
 }
 
 impl<'a, V: VecScopedPrivate> Drop for Pop<'a, V> {
     fn drop(&mut self) {
-        if let Some(value) = self.1.take() {
-            self.vec_mut().push(value)
+        if let Some(popped) = self.popped.take() {
+            self.vec_mut().push(popped)
         }
     }
 }
@@ -92,7 +95,7 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Pop<'a, V> {
     type Element = V::Element;
 
     fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
-        self.0.vec_mut()
+        self.inner.vec_mut()
     }
 }
 

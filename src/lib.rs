@@ -211,7 +211,7 @@ fn test_update() {
 
     let mut a = vec![0, 1, 2, 3];
     {
-        assert_eq!([0, 1, 5, 3, 6], *a.update(2, 5))
+        assert_eq!([0, 1, 5, 3], *a.update(2, 5))
     }
     assert_eq!([0, 1, 2, 3], *a);
 }

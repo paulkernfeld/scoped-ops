@@ -127,8 +127,11 @@ pub struct Update<'a, V: VecScopedPrivate>(&'a mut V, usize, Option<V::Element>)
 impl<'a, V: VecScopedPrivate> Update<'a, V> {
     pub fn new(vec_scoped: &'a mut V, value: V::Element, idx: usize) -> Self {
         let inner = vec_scoped.vec_mut();
-        let old = inner.remove(idx);
-        inner.insert(idx, value);
+        // i think this is efficient?
+        let old = inner.swap_remove(idx);
+        let end = inner.len();
+        inner.push(value);
+        inner.swap(end, idx);
         Self(vec_scoped, idx, Some(old))
     }
 }

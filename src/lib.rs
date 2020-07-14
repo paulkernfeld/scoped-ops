@@ -145,7 +145,11 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Push<'a, V> {
 
 impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 
-pub struct Assign<'a, V: VecScopedPrivate>(&'a mut V, usize, Option<V::Element>);
+pub struct Assign<'a, V: VecScopedPrivate> {
+    inner: &'a mut V,
+    idx: usize,
+    assigned: Option<V::Element>,
+}
 
 impl<'a, V: VecScopedPrivate> Assign<'a, V> {
     pub fn new(vec_scoped: &'a mut V, mut value: V::Element, idx: usize) -> Self {
@@ -154,7 +158,11 @@ impl<'a, V: VecScopedPrivate> Assign<'a, V> {
             let temp = &mut value;
             std::mem::swap(old, temp);
         }
-        Self(vec_scoped, idx, Some(value))
+        Self {
+            inner: vec_scoped,
+            idx,
+            assigned: Some(value),
+        }
     }
 }
 
@@ -162,14 +170,14 @@ impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &*self.inner
     }
 }
 
 impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
     fn drop(&mut self) {
-        let idx = self.1;
-        if let Some(old) = self.2.take() {
+        let idx = self.idx;
+        if let Some(old) = self.assigned.take() {
             self.vec_mut()[idx] = old;
         }
     }
@@ -179,7 +187,7 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Assign<'a, V> {
     type Element = V::Element;
 
     fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
-        self.0.vec_mut()
+        self.inner.vec_mut()
     }
 }
 

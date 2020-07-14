@@ -260,12 +260,7 @@ fn test_assigned() {
 #[test]
 #[should_panic]
 fn test_assigned_panics_with_out_of_bounds_index() {
-    let mut a = vec![1];
-    {
-        // panics here
-        assert_eq!([1], *a.assigned(2, 5))
-    }
-    assert_eq!([1], *a);
+    vec![1].assigned(2, 5);
 }
 
 // TODO automatically verify that this warns

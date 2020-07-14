@@ -49,6 +49,8 @@ pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
         Pop::new(self)
     }
 
+    /// Temporarily assign an element at `idx` of the `Vec`.
+    /// Panics if `idx` is out of bounds.
     fn assigned(&mut self, idx: usize, value: T) -> Assign<Self>
     where
         Self: Sized,

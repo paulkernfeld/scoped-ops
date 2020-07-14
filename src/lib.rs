@@ -148,7 +148,7 @@ impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 pub struct Assign<'a, V: VecScopedPrivate> {
     inner: &'a mut V,
     idx: usize,
-    assigned: Option<V::Element>,
+    previous: Option<V::Element>,
 }
 
 impl<'a, V: VecScopedPrivate> Assign<'a, V> {
@@ -167,7 +167,7 @@ impl<'a, V: VecScopedPrivate> Assign<'a, V> {
         Self {
             inner: vec_scoped,
             idx,
-            assigned: Some(value),
+            previous: Some(value),
         }
     }
 }
@@ -183,7 +183,7 @@ impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
 impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
     fn drop(&mut self) {
         let idx = self.idx;
-        if let Some(old) = self.assigned.take() {
+        if let Some(old) = self.previous.take() {
             self.vec_mut()[idx] = old;
         }
     }

@@ -49,11 +49,11 @@ pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
         Pop::new(self)
     }
 
-    fn update(&mut self, idx: usize, value: T) -> Update<Self>
+    fn assigned(&mut self, idx: usize, value: T) -> Assign<Self>
     where
         Self: Sized,
     {
-        Update::new(self, value, idx)
+        Assign::new(self, value, idx)
     }
 }
 
@@ -145,9 +145,9 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Push<'a, V> {
 
 impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 
-pub struct Update<'a, V: VecScopedPrivate>(&'a mut V, usize, Option<V::Element>);
+pub struct Assign<'a, V: VecScopedPrivate>(&'a mut V, usize, Option<V::Element>);
 
-impl<'a, V: VecScopedPrivate> Update<'a, V> {
+impl<'a, V: VecScopedPrivate> Assign<'a, V> {
     pub fn new(vec_scoped: &'a mut V, value: V::Element, idx: usize) -> Self {
         let inner = vec_scoped.vec_mut();
         // i think this is efficient?
@@ -159,7 +159,7 @@ impl<'a, V: VecScopedPrivate> Update<'a, V> {
     }
 }
 
-impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Update<'a, V> {
+impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Assign<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
@@ -167,7 +167,7 @@ impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref
     }
 }
 
-impl<'a, V: VecScopedPrivate> Drop for Update<'a, V> {
+impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
     fn drop(&mut self) {
         let idx = self.1;
         if let Some(old) = self.2.take() {
@@ -176,7 +176,7 @@ impl<'a, V: VecScopedPrivate> Drop for Update<'a, V> {
     }
 }
 
-impl<'a, V: VecScopedPrivate> VecScopedPrivate for Update<'a, V> {
+impl<'a, V: VecScopedPrivate> VecScopedPrivate for Assign<'a, V> {
     type Element = V::Element;
 
     fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
@@ -184,7 +184,7 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Update<'a, V> {
     }
 }
 
-impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Update<'a, V> {}
+impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Assign<'a, V> {}
 
 #[test]
 fn test_scoped_vec() {
@@ -231,13 +231,13 @@ fn test_pop_push() {
 fn test_update() {
     let mut a = vec![1];
     {
-        assert_eq!([-1], *a.update(0, -1));
+        assert_eq!([-1], *a.assigned(0, -1));
     }
     assert_eq!([1], *a);
 
     let mut a = vec![0, 1, 2, 3];
     {
-        assert_eq!([0, 1, 5, 3], *a.update(2, 5))
+        assert_eq!([0, 1, 5, 3], *a.assigned(2, 5))
     }
     assert_eq!([0, 1, 2, 3], *a);
 }

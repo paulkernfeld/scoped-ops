@@ -49,7 +49,10 @@ pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
         Pop::new(self)
     }
 
-    fn update(&mut self, idx: usize, value: T) -> Update<Self> {
+    fn update(&mut self, idx: usize, value: T) -> Update<Self>
+    where
+        Self: Sized,
+    {
         Update::new(self, value, idx)
     }
 }

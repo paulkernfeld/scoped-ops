@@ -157,6 +157,12 @@ impl<'a, V: VecScopedPrivate> Assign<'a, V> {
         if let Some(old) = inner.get_mut(idx) {
             let temp = &mut value;
             std::mem::swap(old, temp);
+        } else {
+            panic!(
+                "assigned index (is {}) should be < len (is {})",
+                idx,
+                inner.len()
+            )
         }
         Self {
             inner: vec_scoped,
@@ -235,12 +241,23 @@ fn test_pop_push() {
 }
 
 #[test]
-fn test_update() {
+fn test_assigned() {
     let mut a = vec![0, 1, 2, 3];
     {
         assert_eq!([0, 1, 5, 3], *a.assigned(2, 5))
     }
     assert_eq!([0, 1, 2, 3], *a);
+}
+
+#[test]
+#[should_panic]
+fn test_assigned_panics_with_out_of_bounds_index() {
+    let mut a = vec![1];
+    {
+        // panics here
+        assert_eq!([1], *a.assigned(2, 5))
+    }
+    assert_eq!([1], *a);
 }
 
 // TODO automatically verify that this warns

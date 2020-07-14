@@ -148,14 +148,13 @@ impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 pub struct Assign<'a, V: VecScopedPrivate>(&'a mut V, usize, Option<V::Element>);
 
 impl<'a, V: VecScopedPrivate> Assign<'a, V> {
-    pub fn new(vec_scoped: &'a mut V, value: V::Element, idx: usize) -> Self {
+    pub fn new(vec_scoped: &'a mut V, mut value: V::Element, idx: usize) -> Self {
         let inner = vec_scoped.vec_mut();
-        // i think this is efficient?
-        let old = inner.swap_remove(idx);
-        let end = inner.len();
-        inner.push(value);
-        inner.swap(end, idx);
-        Self(vec_scoped, idx, Some(old))
+        if let Some(old) = inner.get_mut(idx) {
+            let temp = &mut value;
+            std::mem::swap(old, temp);
+        }
+        Self(vec_scoped, idx, Some(value))
     }
 }
 

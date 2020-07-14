@@ -148,7 +148,7 @@ impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 pub struct Assign<'a, V: VecScopedPrivate> {
     inner: &'a mut V,
     idx: usize,
-    previous: Option<V::Element>,
+    previous: V::Element,
 }
 
 impl<'a, V: VecScopedPrivate> Assign<'a, V> {
@@ -167,7 +167,7 @@ impl<'a, V: VecScopedPrivate> Assign<'a, V> {
         Self {
             inner: vec_scoped,
             idx,
-            previous: Some(value),
+            previous: value,
         }
     }
 }
@@ -183,8 +183,16 @@ impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
 impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
     fn drop(&mut self) {
         let idx = self.idx;
-        if let Some(old) = self.previous.take() {
-            self.vec_mut()[idx] = old;
+        let inner = self.inner.vec_mut();
+        if let Some(old) = inner.get_mut(idx) {
+            let temp = &mut self.previous;
+            std::mem::swap(old, temp);
+        } else {
+            panic!(
+                "dropping assigned index (is {}) should be < len (is {}), this should never happen",
+                idx,
+                inner.len()
+            )
         }
     }
 }

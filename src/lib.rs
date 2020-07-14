@@ -236,12 +236,6 @@ fn test_pop_push() {
 
 #[test]
 fn test_update() {
-    let mut a = vec![1];
-    {
-        assert_eq!([-1], *a.assigned(0, -1));
-    }
-    assert_eq!([1], *a);
-
     let mut a = vec![0, 1, 2, 3];
     {
         assert_eq!([0, 1, 5, 3], *a.assigned(2, 5))

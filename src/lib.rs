@@ -155,8 +155,7 @@ impl<'a, V: VecScopedPrivate> Assign<'a, V> {
     pub fn new(vec_scoped: &'a mut V, mut value: V::Element, idx: usize) -> Self {
         let inner = vec_scoped.vec_mut();
         if let Some(old) = inner.get_mut(idx) {
-            let temp = &mut value;
-            std::mem::swap(old, temp);
+            std::mem::swap(old, &mut value);
         } else {
             panic!(
                 "assigned index (is {}) should be < len (is {})",
@@ -185,8 +184,7 @@ impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
         let idx = self.idx;
         let inner = self.inner.vec_mut();
         if let Some(old) = inner.get_mut(idx) {
-            let temp = &mut self.previous;
-            std::mem::swap(old, temp);
+            std::mem::swap(old, &mut self.previous);
         } else {
             panic!(
                 "dropping assigned index (is {}) should be < len (is {}), this should never happen",

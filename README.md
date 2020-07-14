@@ -20,5 +20,20 @@ Disadvantages:
 - The generics are kind of a beast; you'll end up with complex nested types like when using futures or iterators
 - The syntax is a bit long and indent-y for my tastes
 
-Todo:
-- Add a popping type
+I can think of a few possible alternatives for temporarily and reversibly modifying data:
+
+- Just clone the data, then you can modify the clone however you want
+- Trust the user to take care of it
+- Apply adapters around the original data structure at read time. For example, you could have a `VecPushed` that has
+  most of the same methods as `Vec`, but acts as if it has an element pushed onto the end. For example, if the
+  underlying `Vec` has length 2, the `VecPushed` would say that its length is 3. Possible disadvantages:
+  - A lot of code to implement
+  - Applying a lot of modifications, or certain kinds of modifications, might hurt performance
+  - You couldn't get a slice, because the data doesn't actually exist in memory
+
+To do:
+
+- Add a few useful operations for `Vec`
+- Add support for other data structures
+- Figure out if this would actualy be useful for anything 😂
+- Explore owned or reference-counted variants?

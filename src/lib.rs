@@ -48,6 +48,15 @@ pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
     {
         Pop::new(self)
     }
+
+    /// Temporarily assign an element at `idx` of the `Vec`.
+    /// Panics if `idx` is out of bounds.
+    fn assigned(&mut self, idx: usize, value: T) -> Assign<Self>
+    where
+        Self: Sized,
+    {
+        Assign::new(self, value, idx)
+    }
 }
 
 impl<T> VecScopedPrivate for Vec<T> {
@@ -138,6 +147,66 @@ impl<'a, V: VecScopedPrivate> VecScopedPrivate for Push<'a, V> {
 
 impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Push<'a, V> {}
 
+pub struct Assign<'a, V: VecScopedPrivate> {
+    inner: &'a mut V,
+    idx: usize,
+    previous: V::Element,
+}
+
+impl<'a, V: VecScopedPrivate> Assign<'a, V> {
+    pub fn new(vec_scoped: &'a mut V, mut value: V::Element, idx: usize) -> Self {
+        let inner = vec_scoped.vec_mut();
+        if let Some(old) = inner.get_mut(idx) {
+            std::mem::swap(old, &mut value);
+        } else {
+            panic!(
+                "assigned index (is {}) should be < len (is {})",
+                idx,
+                inner.len()
+            )
+        }
+        Self {
+            inner: vec_scoped,
+            idx,
+            previous: value,
+        }
+    }
+}
+
+impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &*self.inner
+    }
+}
+
+impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
+    fn drop(&mut self) {
+        let idx = self.idx;
+        let inner = self.inner.vec_mut();
+        if let Some(old) = inner.get_mut(idx) {
+            std::mem::swap(old, &mut self.previous);
+        } else {
+            panic!(
+                "dropping assigned index (is {}) should be < len (is {}), this should never happen",
+                idx,
+                inner.len()
+            )
+        }
+    }
+}
+
+impl<'a, V: VecScopedPrivate> VecScopedPrivate for Assign<'a, V> {
+    type Element = V::Element;
+
+    fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+        self.inner.vec_mut()
+    }
+}
+
+impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Assign<'a, V> {}
+
 #[test]
 fn test_scoped_vec() {
     let mut a = vec![1];
@@ -177,6 +246,21 @@ fn test_pop_push() {
         assert_eq!([-1], *a.popped().pushed(-1));
     }
     assert_eq!([1], *a);
+}
+
+#[test]
+fn test_assigned() {
+    let mut a = vec![0, 1, 2, 3];
+    {
+        assert_eq!([0, 1, 5, 3], *a.assigned(2, 5))
+    }
+    assert_eq!([0, 1, 2, 3], *a);
+}
+
+#[test]
+#[should_panic]
+fn test_assigned_panics_with_out_of_bounds_index() {
+    vec![1].assigned(2, 5);
 }
 
 // TODO automatically verify that this warns

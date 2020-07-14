@@ -163,7 +163,7 @@ impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        std::ops::Deref::deref(self.0)
+        &*self.0
     }
 }
 

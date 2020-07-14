@@ -158,7 +158,7 @@ impl<'a, V: VecScopedPrivate> Assign<'a, V> {
     }
 }
 
-impl<'a, T, V: std::ops::Deref<Target = [T]> + VecScopedPrivate> std::ops::Deref for Assign<'a, V> {
+impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {

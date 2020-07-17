@@ -34,6 +34,10 @@ I can think of a few possible alternatives for temporarily and reversibly modify
 To do:
 
 - Add a few useful operations for `Vec`
-- Add support for other data structures
+- Add a demo to this README
+- Refine API, if possible
 - Figure out if this would actualy be useful for anything 😂
-- Explore owned or reference-counted variants?
+- Explore owned variant
+- Explore support for "commit vs. revert"
+- Add support for other data structures?
+- Explore reference-counted variant?

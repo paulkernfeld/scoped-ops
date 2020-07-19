@@ -30,6 +30,8 @@
 //!
 //! Disadvantages:
 //!
+//! - Using generics is "viral:" any code that uses this will also need to be generic, which will
+//!   make looping a lot harder.
 //! - These reversions could in many cases just be coded by hand
 //! - Possibly slow compilation
 //! - The generics are kind of a beast; you'll end up with complex nested types like when using futures or iterators
@@ -48,8 +50,7 @@
 //!
 //! To do:
 //!
-//! - Explore owned variant
-//! - Explore support for "commit vs. revert"
+//! - Explore support for "commit vs. revert"?
 //! - Add support for other data structures?
 //! - Explore reference-counted variant?
 //! - Figure out if this would actually be useful for anything 😂?
@@ -304,6 +305,18 @@ fn test_must_use() {
     a.pushed(2); // This pushes a value that is then immediately popped, which is useless
     assert_eq!([1], *a);
 }
+
+// I don't think this can work b/c the type is different each iteration of the loop. There's a
+// similar issue with recursion. With a complicated enough system of generics this could be used but
+// overall it's probably not worth the trouble.
+//
+// #[test]
+// fn test_loop() {
+//     let mut a: Box<dyn VecScoped<i32>> = Box::new(vec![]);
+//     for i in 0..3 {
+//         a = a.pushed(i);
+//     }
+// }
 
 pub mod owned {
     pub trait VecScopedPrivate {

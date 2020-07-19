@@ -1,63 +1,85 @@
-//! This repo is an ergonomics experiment on a way to temporarily and reversibly modify data structures in Rust. The idea is
-//! that it lets you hand a data structure off to another piece of code saying "okay, you can modify this data while you're
-//! using it, but you have to put it back to the way you found it." The approach here gives each mutating operation a scope,
-//! reverting the operation when it goes out of scope. So once the operation goes out of scope, the state of the data
-//! structure will be returned to what it was before the scoped operation was applied (except for maybe like the capacity of
-//! a `Vec` could be different, or something like that). Because each operation is reverted when it goes out of scope,
-//! operations can be nested without complication. Conceptually this is like a weaker version of a partially persistent data
+//! This repo is a 💥 FAILED 💥 ergonomics experiment on a way to temporarily and reversibly modify
+//! data structures in Rust. The idea is that it lets you hand a data structure off to another piece
+//! of code saying "okay, you can modify this data while you're using it, but you have to put it
+//! back to the way you found it." The approach here gives each mutating operation a scope,
+//! reverting the operation when it goes out of scope. So once the operation goes out of scope, the
+//! state of the data structure will be returned to what it was before the scoped operation was
+//! applied (except for maybe like the capacity of a `Vec` could be different, or something like
+//! that). Because each operation is reverted when it goes out of scope, operations can be nested
+//! without complication. Conceptually this is like a weaker version of a partially persistent data
 //! structure.
 //!
-//! Here's a simple example of pushing an element onto a Vec, and having the change automatically
-//! undone:
+//! Here's a simple example of changing a Vec, and having the change automatically undone:
 //!
 //! ```
 //! use scoped_ops::borrowed::VecScoped;
 //!
-//! let mut a = vec![1];
-//! {
+//! // TODO don't give a mut Vec
+//! let user_fn = |a: &mut Vec<i32>| {
 //!     // these operations modify the Vec in place
 //!     let mut b = a.pushed(2);
 //!     let c = b.assigned(0, 5);
 //!     assert_eq!([5, 2], *c);
-//! }  // c and b drop, and undo their changes
+//! };  // c and b drop, and undo their changes
 //!
+//! let mut a = vec![1];
+//! user_fn(&mut a);
 //! assert_eq!([1], *a);
 //! ```
 //!
-//! Advantages:
+//! I thought this would be a kind of promising idea:
 //!
 //! - Uses normal Rust data structures, so can be integrated into existing code
 //! - Hopefully zero-cost abstraction, although inspection would be needed to verify
 //! - No dependencies, could work without `std`
 //!
-//! Disadvantages:
+//! Why did this experiment fail?
 //!
 //! - I can't find a real-world use case for this!
-//! - Using generics is "viral:" any code that uses this will also need to be generic, which will
-//!   make looping a lot harder.
-//! - These reversions could in many cases just be coded by hand
-//! - Possibly slow compilation
-//! - The generics are kind of a beast; you'll end up with complex nested types like when using futures or iterators
-//! - The syntax is a bit long and indent-y for my tastes
+//! - Using generics is "viral:" any code that uses this will also need to be generic. This makes
+//!   something like looping or recursion a lot harder. You'll end up with complex nested types like
+//!   when using futures or iterators.
+//! - These reversions could in many cases just be coded by hand instead
+//! - Using mutable references, I need to create too many `let` bindings.
 //!
-//! I can think of a few possible alternatives for temporarily and reversibly modifying data:
+//! Instead of using this approach, I can think of a few possible alternatives for temporarily and
+//! reversibly modifying data:
 //!
 //! - Just clone the data, then you can modify the clone however you want
-//! - Trust the user to take care of it
-//! - Apply adapters around the original data structure at read time. For example, you could have a `VecPushed` that has
-//!   most of the same methods as `Vec`, but acts as if it has an element pushed onto the end. For example, if the
-//!   underlying `Vec` has length 2, the `VecPushed` would say that its length is 3. Possible disadvantages:
+//! - Trust the user to undo their own changes the data structure
+//! - Apply adapters around the original data structure at read time. For example, you could have a
+//!   `VecPushed` that has most of the same methods as `Vec`, but acts as if it has an element
+//!   pushed onto the end. For example, if the underlying `Vec` has length 2, the `VecPushed` would
+//!   say that its length is 3. Possible disadvantages:
 //!   - A lot of code to implement
 //!   - Applying a lot of modifications, or certain kinds of modifications, might hurt performance
 //!   - You couldn't get a slice, because the data doesn't actually exist in memory
 //!
+//! What I've learned:
+//!
+//! - Using generics for zero-cost abstractions introduces a usability penalty, because any user
+//!   code needs to use the generics. For example, this makes recursive nesting more annoying.
+//! - Using references can be annoying because it limits you to structuring your code so that the
+//!   lifetimes work out. In the doctest, I need to create additional `let` bindings that I'd rather
+//!   omit.
+//! - It's kind of heard to search for "where would this pattern be useful?" There's no good way to
+//!   search the entire Rust ecosystem for "unnecessarily cloning a `Vec`" for example.
+//! - It's harder to find a problem for a solution than to find a solution to a problem.
+//! - Even a failed experiment helped me learn a lot about structuring Rust code. For example, I
+//!   learned about:
+//!   - It's hard to have both `Drop` and a method that takes `self`
+//!   - When to use associated types vs. generic types
+//!   - How to emulate a [sealed trait](https://rust-lang.github.io/api-guidelines/future-proofing.html)
+//!   - `&mut T` is not [`UnwindSafe`](https://doc.rust-lang.org/std/panic/trait.UnwindSafe.html),
+//!     meaning I can't test panics with this crate (without learning more about unwind safety).
+//!
 //! Possible future directions:
 //!
-//! - Add more operations to `Vec`
+//! - Figure out if this would actually be useful for anything 😂
 //! - Explore support for "commit vs. revert"
+//! - Add more operations to `Vec`
 //! - Add support for other data structures
 //! - Explore reference-counted variant
-//! - Figure out if this would actually be useful for anything 😂
 
 pub mod borrowed {
     /// Everything that is `VecScoped` will need to have mutable access to the underlying `Vec`.
@@ -73,12 +95,13 @@ pub mod borrowed {
 
     /// This trait represent a `Vec` or a temporary modification of a `Vec`
     pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
-        /// Temporarily push an element onto the end of the `Vec`
-        fn pushed(&mut self, value: T) -> Push<Self>
+        /// Temporarily assign an element at `idx` of the `Vec`.
+        /// Panics if `idx` is out of bounds.
+        fn assigned(&mut self, idx: usize, value: T) -> Assign<Self>
         where
             Self: Sized,
         {
-            Push::new(self, value)
+            Assign::new(self, value, idx)
         }
 
         /// Temporarily pop the last element from the end of the `Vec`
@@ -89,13 +112,12 @@ pub mod borrowed {
             Pop::new(self)
         }
 
-        /// Temporarily assign an element at `idx` of the `Vec`.
-        /// Panics if `idx` is out of bounds.
-        fn assigned(&mut self, idx: usize, value: T) -> Assign<Self>
+        /// Temporarily push an element onto the end of the `Vec`
+        fn pushed(&mut self, value: T) -> Push<Self>
         where
             Self: Sized,
         {
-            Assign::new(self, value, idx)
+            Push::new(self, value)
         }
     }
 
@@ -109,8 +131,41 @@ pub mod borrowed {
 
     impl<T> VecScoped<T> for Vec<T> {}
 
-    // TODO would users ever want to access the element that was popped? or if an element was popped?
-    /// See `crate::VecScoped::pop`
+    impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
+        type Target = [T];
+
+        fn deref(&self) -> &Self::Target {
+            self.inner
+        }
+    }
+
+    impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
+        fn drop(&mut self) {
+            let idx = self.idx;
+            let inner = self.inner.vec_mut();
+            if let Some(old) = inner.get_mut(idx) {
+                std::mem::swap(old, &mut self.previous);
+            } else {
+                panic!(
+                    "dropping assigned index (is {}) should be < len (is {}), this should never happen",
+                    idx,
+                    inner.len()
+                )
+            }
+        }
+    }
+
+    impl<'a, V: VecScopedPrivate> VecScopedPrivate for Assign<'a, V> {
+        type Element = V::Element;
+
+        fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+            self.inner.vec_mut()
+        }
+    }
+
+    impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Assign<'a, V> {}
+
+    /// See `crate::borrowed::VecScoped::pop`
     #[must_use]
     pub struct Pop<'a, V: VecScopedPrivate> {
         inner: &'a mut V,
@@ -150,8 +205,7 @@ pub mod borrowed {
 
     impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Pop<'a, V> {}
 
-    // TODO would users ever want to access the element that was popped?
-    /// See `crate::VecScoped::push`
+    /// See `crate::borrowed::VecScoped::push`
     #[must_use]
     pub struct Push<'a, V: VecScopedPrivate>(&'a mut V);
 
@@ -212,40 +266,6 @@ pub mod borrowed {
             }
         }
     }
-
-    impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Assign<'a, V> {
-        type Target = [T];
-
-        fn deref(&self) -> &Self::Target {
-            self.inner
-        }
-    }
-
-    impl<'a, V: VecScopedPrivate> Drop for Assign<'a, V> {
-        fn drop(&mut self) {
-            let idx = self.idx;
-            let inner = self.inner.vec_mut();
-            if let Some(old) = inner.get_mut(idx) {
-                std::mem::swap(old, &mut self.previous);
-            } else {
-                panic!(
-                    "dropping assigned index (is {}) should be < len (is {}), this should never happen",
-                    idx,
-                    inner.len()
-                )
-            }
-        }
-    }
-
-    impl<'a, V: VecScopedPrivate> VecScopedPrivate for Assign<'a, V> {
-        type Element = V::Element;
-
-        fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
-            self.inner.vec_mut()
-        }
-    }
-
-    impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Assign<'a, V> {}
 
     #[test]
     fn test_scoped_vec() {
@@ -354,8 +374,7 @@ pub mod owned {
 
     impl<T> VecScoped<T> for Vec<T> {}
 
-    // TODO would users ever want to access the element that was popped? or if an element was popped?
-    /// See `crate::VecScoped::pop`
+    /// See `crate::owned::VecScoped::pop`
     #[must_use]
     pub struct Pop<V: VecScopedPrivate> {
         inner: V,

@@ -15,9 +15,11 @@
 //!
 //! let mut a = vec![1];
 //! {
+//!     // these operations modify the Vec in place
 //!     let mut b = a.pushed(2);
-//!     assert_eq!([1, 2], *b);
-//! }  // b drops, and undoes its change
+//!     let c = b.assigned(0, 5);
+//!     assert_eq!([5, 2], *c);
+//! }  // c and b drop, and undo their changes
 //!
 //! assert_eq!([1], *a);
 //! ```
@@ -30,6 +32,7 @@
 //!
 //! Disadvantages:
 //!
+//! - I can't find a real-world use case for this!
 //! - Using generics is "viral:" any code that uses this will also need to be generic, which will
 //!   make looping a lot harder.
 //! - These reversions could in many cases just be coded by hand

@@ -17,9 +17,11 @@ use scoped_ops::VecScoped;
 
 let mut a = vec![1];
 {
+    // these operations modify the Vec in place
     let mut b = a.pushed(2);
-    assert_eq!([1, 2], *b);
-}  // b drops, and undoes its change
+    let c = b.assigned(0, 5);
+    assert_eq!([5, 2], *c);
+}  // c and b drop, and undo their changes
 
 assert_eq!([1], *a);
 ```
@@ -32,6 +34,9 @@ Advantages:
 
 Disadvantages:
 
+- I can't find a real-world use case for this!
+- Using generics is "viral:" any code that uses this will also need to be generic, which will
+  make looping a lot harder.
 - These reversions could in many cases just be coded by hand
 - Possibly slow compilation
 - The generics are kind of a beast; you'll end up with complex nested types like when using futures or iterators
@@ -50,10 +55,7 @@ I can think of a few possible alternatives for temporarily and reversibly modify
 
 To do:
 
-- Add a few useful operations for `Vec`
-- Refine API, if possible
-- Figure out if this would actually be useful for anything 😂
-- Explore owned variant
-- Explore support for "commit vs. revert"
+- Explore support for "commit vs. revert"?
 - Add support for other data structures?
 - Explore reference-counted variant?
+- Figure out if this would actually be useful for anything 😂?

@@ -334,8 +334,8 @@ pub mod owned {
     pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
         /// Temporarily pop the last element from the end of the `Vec`
         fn popped(self) -> Pop<Self>
-            where
-                Self: Sized,
+        where
+            Self: Sized,
         {
             Pop::new(self)
         }

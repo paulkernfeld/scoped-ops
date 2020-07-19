@@ -12,10 +12,9 @@
 //! Here's a simple example of changing a Vec, and having the change automatically undone:
 //!
 //! ```
-//! use scoped_ops::borrowed::VecScoped;
+//! use scoped_ops::borrowed::{VecScoped, Noop};
 //!
-//! // TODO don't give a mut Vec
-//! let user_fn = |a: &mut Vec<i32>| {
+//! let user_fn = |a: &mut Noop<Vec<i32>>| {
 //!     // these operations modify the Vec in place
 //!     let mut b = a.pushed(2);
 //!     let c = b.assigned(0, 5);
@@ -23,7 +22,7 @@
 //! };  // c and b drop, and undo their changes
 //!
 //! let mut a = vec![1];
-//! user_fn(&mut a);
+//! user_fn(&mut a.nooped());
 //! assert_eq!([1], *a);
 //! ```
 //!
@@ -104,6 +103,14 @@ pub mod borrowed {
             Assign::new(self, value, idx)
         }
 
+        /// This can be used to turn a `Vec` into a `VecScoped`
+        fn nooped(&mut self) -> Noop<Self>
+        where
+            Self: Sized,
+        {
+            Noop::new(self)
+        }
+
         /// Temporarily pop the last element from the end of the `Vec`
         fn popped(&mut self) -> Pop<Self>
         where
@@ -164,6 +171,34 @@ pub mod borrowed {
     }
 
     impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Assign<'a, V> {}
+
+    /// See `crate::borrowed::VecScoped::noop`
+    #[must_use]
+    pub struct Noop<'a, V: VecScopedPrivate>(&'a mut V);
+
+    impl<'a, V: VecScopedPrivate> Noop<'a, V> {
+        pub fn new(vec_scoped: &'a mut V) -> Self {
+            Self(vec_scoped)
+        }
+    }
+
+    impl<'a, T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Noop<'a, V> {
+        type Target = [T];
+
+        fn deref(&self) -> &Self::Target {
+            self.0
+        }
+    }
+
+    impl<'a, V: VecScopedPrivate> VecScopedPrivate for Noop<'a, V> {
+        type Element = V::Element;
+
+        fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+            self.0.vec_mut()
+        }
+    }
+
+    impl<'a, T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Noop<'a, V> {}
 
     /// See `crate::borrowed::VecScoped::pop`
     #[must_use]
@@ -279,6 +314,15 @@ pub mod borrowed {
         }
         assert_eq!([1, -2], *a.pushed(-2));
         assert_eq!([1], *a);
+    }
+
+    #[test]
+    fn test_noop() {
+        let mut a = vec![1, 2, 3];
+        {
+            assert_eq!([1, 2, 3], *a.nooped());
+        }
+        assert_eq!([1, 2, 3], *a);
     }
 
     #[test]

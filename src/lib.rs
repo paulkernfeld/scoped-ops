@@ -304,3 +304,82 @@ fn test_must_use() {
     a.pushed(2); // This pushes a value that is then immediately popped, which is useless
     assert_eq!([1], *a);
 }
+
+pub mod owned {
+    pub trait VecScopedPrivate {
+        type Element;
+
+        fn vec_mut(&mut self) -> &mut Vec<Self::Element>;
+    }
+
+    use std::ops::Deref;
+
+    /// This trait represent a `Vec` or a temporary modification of a `Vec`
+    pub trait VecScoped<T>: VecScopedPrivate<Element = T> {
+        /// Temporarily pop the last element from the end of the `Vec`
+        fn popped(self) -> Pop<Self>
+            where
+                Self: Sized,
+        {
+            Pop::new(self)
+        }
+    }
+
+    impl<T> VecScopedPrivate for Vec<T> {
+        type Element = T;
+
+        fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+            self
+        }
+    }
+
+    impl<T> VecScoped<T> for Vec<T> {}
+
+    // TODO would users ever want to access the element that was popped? or if an element was popped?
+    /// See `crate::VecScoped::pop`
+    #[must_use]
+    pub struct Pop<V: VecScopedPrivate> {
+        inner: V,
+        popped: Option<V::Element>,
+    }
+
+    impl<V: VecScopedPrivate> Pop<V> {
+        pub fn new(mut inner: V) -> Self {
+            let popped = inner.vec_mut().pop();
+            Self { inner, popped }
+        }
+
+        pub fn into_inner(mut self) -> V {
+            if let Some(popped) = self.popped.take() {
+                self.vec_mut().push(popped)
+            }
+            self.inner
+        }
+    }
+
+    impl<T, V: Deref<Target = [T]> + VecScopedPrivate> Deref for Pop<V> {
+        type Target = [T];
+
+        fn deref(&self) -> &Self::Target {
+            &self.inner
+        }
+    }
+
+    impl<V: VecScopedPrivate> VecScopedPrivate for Pop<V> {
+        type Element = V::Element;
+
+        fn vec_mut(&mut self) -> &mut Vec<Self::Element> {
+            self.inner.vec_mut()
+        }
+    }
+
+    impl<T, V: VecScopedPrivate<Element = T>> VecScoped<T> for Pop<V> {}
+
+    #[test]
+    fn test_pop() {
+        let a = vec![1];
+        let b = a.popped();
+        assert_eq!([0i32; 0], *b);
+        assert_eq!([1], *b.into_inner());
+    }
+}

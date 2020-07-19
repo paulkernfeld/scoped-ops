@@ -51,12 +51,13 @@
 //!   - Applying a lot of modifications, or certain kinds of modifications, might hurt performance
 //!   - You couldn't get a slice, because the data doesn't actually exist in memory
 //!
-//! To do:
+//! Possible future directions:
 //!
-//! - Explore support for "commit vs. revert"?
-//! - Add support for other data structures?
-//! - Explore reference-counted variant?
-//! - Figure out if this would actually be useful for anything 😂?
+//! - Add more operations to `Vec`
+//! - Explore support for "commit vs. revert"
+//! - Add support for other data structures
+//! - Explore reference-counted variant
+//! - Figure out if this would actually be useful for anything 😂
 
 /// Everything that is `VecScoped` will need to have mutable access to the underlying `Vec`.
 /// However, only the trait implementations should be allowed to mutate the `Vec`; end users

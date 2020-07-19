@@ -1,3 +1,5 @@
+# scoped-ops
+
 This repo is an ergonomics experiment on a way to temporarily and reversibly modify data structures in Rust. The idea is
 that it lets you hand a data structure off to another piece of code saying "okay, you can modify this data while you're
 using it, but you have to put it back to the way you found it." The approach here gives each mutating operation a scope,
@@ -6,6 +8,21 @@ structure will be returned to what it was before the scoped operation was applie
 a `Vec` could be different, or something like that). Because each operation is reverted when it goes out of scope,
 operations can be nested without complication. Conceptually this is like a weaker version of a partially persistent data
 structure.
+
+Here's a simple example of pushing an element onto a Vec, and having the change automatically
+undone:
+
+```rust
+use scoped_ops::VecScoped;
+
+let mut a = vec![1];
+{
+    let mut b = a.pushed(2);
+    assert_eq!([1, 2], *b);
+}  // b drops, and undoes its change
+
+assert_eq!([1], *a);
+```
 
 Advantages:
 
@@ -34,9 +51,8 @@ I can think of a few possible alternatives for temporarily and reversibly modify
 To do:
 
 - Add a few useful operations for `Vec`
-- Add a demo to this README
 - Refine API, if possible
-- Figure out if this would actualy be useful for anything 😂
+- Figure out if this would actually be useful for anything 😂
 - Explore owned variant
 - Explore support for "commit vs. revert"
 - Add support for other data structures?

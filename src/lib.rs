@@ -48,13 +48,11 @@
 //!
 //! To do:
 //!
-//! - Add a few useful operations for `Vec`
-//! - Refine API, if possible
-//! - Figure out if this would actually be useful for anything 😂
 //! - Explore owned variant
 //! - Explore support for "commit vs. revert"
 //! - Add support for other data structures?
 //! - Explore reference-counted variant?
+//! - Figure out if this would actually be useful for anything 😂?
 
 /// Everything that is `VecScoped` will need to have mutable access to the underlying `Vec`.
 /// However, only the trait implementations should be allowed to mutate the `Vec`; end users

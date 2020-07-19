@@ -12,23 +12,16 @@
 //!
 //! assert_eq!([1], *a);
 //! ```
-mod private {
-    // TODO is this a bad idea, because it would prevent users from implementing their own ops?
-    /// Everything that is `VecScoped` will need to have mutable access to the underlying `Vec`.
-    /// However, only the trait implementations should be allowed to mutate the `Vec`; end users
-    /// should not, because they could violate an invariant.
-    ///
-    /// It's illegal to have a private trait in a public interface. However, in order to emulate
-    /// sealed traits you can use this pattern of a public trait in a private inner module. I got
-    /// this trick from here: https://github.com/rust-lang/rust/issues/34537
-    pub trait VecScopedPrivate {
-        type Element;
 
-        fn vec_mut(&mut self) -> &mut Vec<Self::Element>;
-    }
+/// Everything that is `VecScoped` will need to have mutable access to the underlying `Vec`.
+/// However, only the trait implementations should be allowed to mutate the `Vec`; end users
+/// should not, because they could violate an invariant.
+pub trait VecScopedPrivate {
+    type Element;
+
+    fn vec_mut(&mut self) -> &mut Vec<Self::Element>;
 }
 
-use private::VecScopedPrivate;
 use std::ops::Deref;
 
 /// This trait represent a `Vec` or a temporary modification of a `Vec`
